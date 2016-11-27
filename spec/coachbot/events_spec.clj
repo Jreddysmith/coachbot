@@ -77,7 +77,9 @@
               " • help -- display this help message\n"
               " • start coaching -- send daily motivational questions\n"
               " • stop coaching -- stop sending questions\n"
-              " • next question -- ask a new question")] @@messages)))
+              " • next question -- ask a new question\n"
+              " • wheel of balance -- starts wheel of balance to give you a "
+              "visual view of how you see your life")] @@messages)))
 
   (context "Start and stop coaching"
     (before-all (swap! @messages empty))
@@ -156,4 +158,20 @@
                (storage/list-questions-asked @ds team-id user2-email))
 
       (should= [{:question first-question, :answer another-fun-answer}]
-               (storage/list-answers @ds team-id user2-email)))))
+               (storage/list-answers @ds team-id user2-email))))
+  (context "wheel of balance"
+    (before-all (swap! @messages empty)
+                (log/set-level! :info)
+                )
+    (it "starts the wheel of balance"
+      (should=
+        [(u1c (str "Excellent.  I'm excited to work on this with you.\n"
+                   "I'm going to ask a few questions, and you can tell me how "
+                   "happy you are with each on a scale of 1-10\n"
+                   "First, how happy are you with your work/life balance?\n"))
+         (u1c "On that same 1-10 scale, how happy are you with your finances?")]
+        (do
+          (handle-event user1-id events/wheel-of-balance-cmd)
+          (handle-event user1-id "8")
+          @@messages)
+        ))))

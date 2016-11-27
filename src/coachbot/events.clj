@@ -89,6 +89,8 @@
 (def stop-coaching-cmd "stop coaching")
 (def next-question-cmd "next question")
 (def another-question-cmd "another question")
+(def wheel-of-balance-cmd "wheel of balance")
+(def wob-cmd "wob")
 
 (defevent {:command hi-cmd
            :help "checks if I'm listening"} hello-world)
@@ -105,6 +107,11 @@
 (defevent {:command next-question-cmd
            :help "ask a new question"
            :aliases [another-question-cmd]} coaching/next-question!)
+
+(defevent {:command wheel-of-balance-cmd
+           :help (str "starts wheel of balance to give you a visual view of "
+                      "how you see your life")
+           :aliases [wob-cmd]} coaching/start-wheel-of-balance!)
 
 (defn- respond-to-event [team-id channel user-id text]
   (let [[command & args] (parser/parse-command text)

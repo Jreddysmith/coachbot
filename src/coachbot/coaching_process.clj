@@ -43,6 +43,17 @@
     (storage/remove-coaching-user! ds user)
     (slack/send-message! bot-access-token channel messages/coaching-goodbye)))
 
+(defn start-wheel-of-balance! [team-id channel user-id]
+  (let [ds (env/datasource)
+        [access-token bot-access-token]
+        (storage/get-access-tokens ds team-id)]
+    (slack/send-message!
+      bot-access-token channel
+      (str "Excellent.  I'm excited to work on this with you.\n"
+           "I'm going to ask a few questions, and you can tell me how "
+           "happy you are with each on a scale of 1-10\n"
+           "First, how happy are you with your work/life balance?\n"))))
+
 (defn register-custom-question! [team-id user-id question]
   (let [ds (env/datasource)
         [access-token _]

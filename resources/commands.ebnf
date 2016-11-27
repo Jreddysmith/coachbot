@@ -1,10 +1,11 @@
 <document> = help | hi | tell-coach | start-coaching |
-             stop-coaching | next-question
+             stop-coaching | next-question | wheel-of-balance
 <help> = "help"
 <hi> = "hi"
 <start-coaching> = "start coaching"
 <stop-coaching> = "stop coaching"
 <next-question> = ("next question" | "another question")
+<wheel-of-balance> = ("wheel of balance" | "wob")
 <tell-coach> = "tell coach", ws, text
 <ws> = <#'\s+'>
 <text> = #"[^\"]*"

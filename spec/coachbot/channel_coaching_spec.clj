@@ -20,33 +20,43 @@
 (ns coachbot.channel-coaching-spec
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
-            [clojure.java.jdbc :as jdbc]
             [coachbot.events :as events]
             [coachbot.channel-coaching-process :refer :all]
-            [coachbot.db :as db]
             [coachbot.mocking :refer :all]
-            [coachbot.storage :as storage]
             [speclj.core :refer :all]
             [taoensso.timbre :as log]))
 
 (log/set-level! :error)
 
-(defn set-channel-id [msg channel-id]
+(defn set-event-channel-id [msg channel-id]
   (assoc-in msg [:event :channel] channel-id))
 
 (defn load-edn [filename]
   (-> (io/resource (str "channel_coaching/" filename))
       slurp
       edn/read-string
-      (assoc :token good-token :team_id team-id)
-      (set-channel-id channel-id)))
+      (assoc :token good-token)))
 
-(defn bob [msg] (set-channel-id msg "bob"))
-(def group-join (load-edn "group_join.edn"))
-(def group-leave (load-edn "group_leave.edn"))
-(def channel-join (load-edn "channel_join.edn"))
+(defn load-event-edn [filename]
+  (-> filename
+      load-edn
+      (assoc :team_id team-id)
+      (set-event-channel-id channel-id)))
+
+(defn button-pressed [question-id value]
+  (-> "option_chosen.edn"
+      load-edn
+      (assoc-in [:team :id] team-id)
+      (assoc-in [:channel :id] channel-id)
+      (assoc-in [:actions 0 :value] (str value))
+      (update-in [:callback_id] #(format % question-id))))
+
+(defn bob [msg] (set-event-channel-id msg "bob"))
+(def group-join (load-event-edn "group_join.edn"))
+(def group-leave (load-event-edn "group_leave.edn"))
+(def channel-join (load-event-edn "channel_join.edn"))
 (def channel-join-bob (bob channel-join))
-(def channel-leave (load-edn "channel_leave.edn"))
+(def channel-leave (load-event-edn "channel_leave.edn"))
 (def channel-leave-bob (bob channel-leave))
 
 (def cmsg (partial uc channel-id))
@@ -104,7 +114,11 @@
                (do (send-channel-question team-id channel-id "second")
                    (latest-messages))))
 
-    (it "should accept answers")
+    (it "should accept answers"
+      #_(should= ["something"]
+                 (do (log/with-level :info
+                       (events/handle-raw-event (button-pressed 2 3)))
+                     (latest-messages))))
 
     (it "should replace old answers")
 

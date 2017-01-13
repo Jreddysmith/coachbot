@@ -63,58 +63,56 @@
 
 (def cmsg (partial uc channel-id))
 
+(defmacro a-channel-event [name message expectation latest-messages]
+  `(it ~name
+     (should= {:status 200, :headers {}, :body nil}
+              (events/handle-raw-event ~message))
+     (should= ~expectation (~latest-messages))))
+
+(defmacro should-be-in-channels [expected-channels events]
+  (let [raw-events (map (fn [event] `(events/handle-raw-event ~event)) events)]
+    `(should= ~expected-channels (do ~@raw-events (list-channels ~team-id)))))
+
+(defmacro should-ask-question [question id latest-messages]
+  `(should= [{:msg (cmsg ~question) :cid (format "cquestion-%d" ~id)
+              :btns
+              [{:name "option", :value 1} {:name "option", :value 2}
+               {:name "option", :value 3} {:name "option", :value 4}
+               {:name "option", :value 5}]}]
+            (do (send-channel-question team-id channel-id ~question)
+                (~latest-messages))))
+
+(defmacro should-store-response [id answer qid email]
+  `(should= {:id ~id, :answer ~answer}
+            (storage/get-channel-question-response @ds team-id ~qid ~email)))
+
 (describe-mocked "Channel coaching" [ds latest-messages]
   (describe "Channel joins"
-    (it "should handle a group joining"
-      (should= {:status 200, :headers {}, :body nil}
-               (events/handle-raw-event group-join))
-      (should= [(cmsg channel-coaching-message)]
-               (latest-messages)))
+    (a-channel-event "should handle a group joining"
+      group-join [(cmsg channel-coaching-message)] latest-messages)
 
-    (it "should handle a group leaving"
-      (should= {:status 200, :headers {}, :body nil}
-               (events/handle-raw-event group-leave))
-      (should= [] (latest-messages)))
+    (a-channel-event "should handle a group leaving"
+      group-leave [] latest-messages)
 
-    (it "should handle a channel joining"
-      (should= {:status 200, :headers {}, :body nil}
-               (events/handle-raw-event channel-join))
-      (should= [(cmsg channel-coaching-message)]
-               (latest-messages)))
+    (a-channel-event "should handle a channel joining"
+      channel-join [(cmsg channel-coaching-message)] latest-messages)
 
-    (it "should handle a channel leaving"
-      (should= {:status 200, :headers {}, :body nil}
-               (events/handle-raw-event channel-leave))
-      (should= [] (latest-messages)))
+    (a-channel-event "should handle a channel leaving"
+      channel-leave [] latest-messages)
 
     (it "should handle multiple channels"
-      (should= [] (list-channels team-id))
-      (should= [channel-id "bob"]
-               (do (events/handle-raw-event channel-join)
-                   (events/handle-raw-event channel-join-bob)
-                   (list-channels team-id)))
-      (should= [channel-id]
-               (do (events/handle-raw-event channel-leave-bob)
-                   (list-channels team-id)))))
+      (should-be-in-channels [] [])
+      (should-be-in-channels [channel-id "bob"] [channel-join
+                                                 channel-join-bob])
+      (should-be-in-channels [channel-id] [channel-leave-bob])))
 
   (describe "Asking questions"
     (before-all (latest-messages))
     (with-all channels-coached (list-channels team-id))
 
     (it "should ask the question to the channel"
-      (should= [{:msg (cmsg "test"), :cid "cquestion-1", :btns
-                 [{:name "option", :value 1} {:name "option", :value 2}
-                  {:name "option", :value 3} {:name "option", :value 4}
-                  {:name "option", :value 5}]}]
-               (do (send-channel-question team-id channel-id "test")
-                   (latest-messages)))
-
-      (should= [{:msg (cmsg "second"), :cid "cquestion-2", :btns
-                 [{:name "option", :value 1} {:name "option", :value 2}
-                  {:name "option", :value 3} {:name "option", :value 4}
-                  {:name "option", :value 5}]}]
-               (do (send-channel-question team-id channel-id "second")
-                   (latest-messages))))
+      (should-ask-question "test" 1 latest-messages)
+      (should-ask-question "second" 2 latest-messages))
 
     (it "should accept answers"
       (should= ["response: Thanks for your response!"
@@ -126,15 +124,9 @@
                    (events/handle-raw-event (button-pressed 2 user1-id 5))
                    (events/handle-raw-event (button-pressed 2 user2-id 4))
                    (latest-messages)))
-      (should= {:id 1, :answer 3}
-               (storage/get-channel-question-response @ds team-id 1
-                                                      user1-email))
-      (should= {:id 2, :answer 5}
-               (storage/get-channel-question-response @ds team-id 2
-                                                      user1-email))
-      (should= {:id 3, :answer 4}
-               (storage/get-channel-question-response @ds team-id 2
-                                                      user2-email)))
+      (should-store-response 1 3 1 user1-email)
+      (should-store-response 2 5 2 user1-email)
+      (should-store-response 3 4 2 user2-email))
 
     (it "should not accept answers after the question has expired")
 

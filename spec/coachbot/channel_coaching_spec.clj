@@ -110,7 +110,7 @@
     (before-all (latest-messages))
     (with-all channels-coached (list-channels team-id))
 
-    (it "should ask the question to the channel"
+    (it "should ask questions to the channel"
       (should-ask-question "test" 1 latest-messages)
       (should-ask-question "second" 2 latest-messages))
 

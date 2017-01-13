@@ -534,9 +534,9 @@
             [(-> (h/update :channel_question_answers)
                  (h/sset {:answer answer})
                  (where-answer-is question-id user-id)) :updated]
-            [(-> (h/insert-into :channel_question_answers)
-                 (h/values [{:qa_id question-id
-                             :scu_id user-id
-                             :answer answer}])) :added])]
+            [(h/values (h/insert-into :channel_question_answers)
+                       [{:qa_id question-id
+                         :scu_id user-id
+                         :answer answer}]) :added])]
       (hu/execute-safely! hq conn)
       result)))

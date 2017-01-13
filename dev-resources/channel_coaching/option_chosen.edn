@@ -6,7 +6,7 @@
  :attachment_id "1",
  :team {:id "replaced_in_test_case", :domain "test"},
  :message_ts "1484235698.000007",
- :user {:id "abc123", :name "test"},
+ :user {:id "replaced_in_test_case", :name "test"},
  :response_url
  "https://hooks.slack.com/actions/blah/123456789012/ab12C3DefGHIJ4kLm5Nopqr6",
  :original_message

@@ -23,6 +23,7 @@
             [coachbot.events :as events]
             [coachbot.channel-coaching-process :refer :all]
             [coachbot.mocking :refer :all]
+            [coachbot.storage :as storage]
             [speclj.core :refer :all]
             [taoensso.timbre :as log]))
 
@@ -43,12 +44,13 @@
       (assoc :team_id team-id)
       (set-event-channel-id channel-id)))
 
-(defn button-pressed [question-id value]
+(defn button-pressed [question-id user-id value]
   (-> "option_chosen.edn"
       load-edn
       (assoc-in [:team :id] team-id)
       (assoc-in [:channel :id] channel-id)
       (assoc-in [:actions 0 :value] (str value))
+      (assoc-in [:user :id] user-id)
       (update-in [:callback_id] #(format % question-id))))
 
 (defn bob [msg] (set-event-channel-id msg "bob"))
@@ -115,16 +117,24 @@
                    (latest-messages))))
 
     (it "should accept answers"
-      #_(should= ["something"]
-                 (do (log/with-level :info
-                       (events/handle-raw-event (button-pressed 2 3)))
-                     (latest-messages))))
-
-    (it "should replace old answers")
-
-    (it "should not accept answers outside of the acceptable range")
-
-    (it "should not accept non-numeric answers")
+      (should= ["response: Thanks for your response!"
+                "response: Thanks for your response!"
+                "response: Great! I've changed your response."
+                "response: Thanks for your response!"]
+               (do (events/handle-raw-event (button-pressed 1 user1-id 3))
+                   (events/handle-raw-event (button-pressed 2 user1-id 3))
+                   (events/handle-raw-event (button-pressed 2 user1-id 5))
+                   (events/handle-raw-event (button-pressed 2 user2-id 4))
+                   (latest-messages)))
+      (should= {:id 1, :answer 3}
+               (storage/get-channel-question-response @ds team-id 1
+                                                      user1-email))
+      (should= {:id 2, :answer 5}
+               (storage/get-channel-question-response @ds team-id 2
+                                                      user1-email))
+      (should= {:id 3, :answer 4}
+               (storage/get-channel-question-response @ds team-id 2
+                                                      user2-email)))
 
     (it "should not accept answers after the question has expired")
 
